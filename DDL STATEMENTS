@@ -1,0 +1,167 @@
+
+----SNOWFLAKE SQL-DDL
+
+
+// create database
+create database company;
+
+create or replace database company;
+
+show databases like 'c%';
+
+use database db;
+
+
+// create schema
+create or replace schema employee;
+create schema if not exists department;
+drop schema if exists department;
+
+show schemas like 'e%';
+
+use schema information_schema;
+use schema public;
+
+
+//create table  ----here schema specified
+create table EMPLOYEE.A(id number,  
+               name varchar(20));
+
+create or replace table B(id number(32,5),                ---- here schema not specified so it can create under public schema
+                          salary number,
+                          department varchar(10));
+               
+-- precision, scale: These are the parameters that can be passed with various datatypes such as number
+                    -- Precision is the length of string/number that column can have
+                    -- Scale is the number of digits that will be allowed after (.)
+                    -- Example: number(38,5) shows that precision is 38 and scale is 5
+                   ------ it can allows 38 characters of number and in decimal it can allows upto 5 characters
+---- To view all snowflake supported datatypes, refer to below URL:
+-- https://docs.snowflake.com/en/sql-reference/data-types.html
+
+--------------------------------------------------------------------------------------------------
+
+
+
+
+--------create file format and stage object---------------
+
+
+--- if you want to consume the data from the external source such as aws,azure or gcp these are 3 cloud data providers that are supported by snowflake. if you want to consume the data from either of these cloud providers means the data is residing out of snowflake which means an external connection that is trying to send the data to snowflake.
+
+
+
+-- Create parquet format
+create or replace file format db.public.parquet_format
+  type = 'parquet';
+
+  ------parquet file is used to 90 percent compressed data campared to csv suppose if a csv file taking 10mb of your space then parquet file compresses the data up to 90 percent means it take about 1 to 1.25mb for the similar data.
+
+------now stage object is again use to ingest the data from AWS. so these are the some of the configuration we have to done before ingestin data from AWS or it can be other cloud platforms as well.
+
+-- Create stage object
+create or replace stage db.public.mystage
+  file_format = db.public.parquet_format; ---here spedified the stage created under which file format
+
+----now awe are ready to consume the data fro external sources to the stage then we can take the data from stage to snowflake tables.
+
+
+-------------------------------------------------------------------------------------------
+-----create views-------
+// create view
+-- a materialized view is a database object that contains the results of a query.
+-- For example, it may be a local copy of data located remotely,
+--      or may be a subset of the rows and/or columns of a table or join result, or may be a summary using an aggregate function
+
+----view are the containers which contains the results of a every query you can run inside the sqldatabase it can be snowflake or can be other databases like mysql or any what heppens when we runs a query we get some results(it can be complex quey with multiple joins or simple query). but if the query is very complex, you can just snapshot of a data which is coming on base of some filters or may be after joining multiple tables at this case you have to run the code again and again using big complete sql script but what you do now using sql views you can wrap that complete query wrap that complete code what you have written inside the view then you can return fetch out the data directly from a view.
+
+
+create view myview as
+    select *
+    from "SNOWFLAKE_SAMPLE_DATA"."TPCH_SF100"."CUSTOMER"
+    where c_custkey <= 5;
+
+select *
+    from "SNOWFLAKE_SAMPLE_DATA"."TPCH_SF100"."CUSTOMER"
+
+
+select * from myview;
+
+
+
+---- To know more about snowflake views, refer to below URL:
+-- https://docs.snowflake.com/en/sql-reference/sql/create-view.html
+
+-------------------------------------------------------------------------
+-----alter virtual warehouse------------
+----------------- ALTER -----------------
+-- alter the structure of the objects
+
+------ ALTER WAREHOUSE
+  -- Suspends or resumes a virtual warehouse, or aborts all queries (and other SQL statements) for a warehouse.
+  -- Can also be used to rename or set/unset the properties for a warehouse.
+ 
+-- To suspend a warehouse
+alter warehouse test suspend;
+
+alter warehouse test resume;
+
+-- if warehouse is in suspended state, we can resume it by running below statement
+alter warehouse test resume if suspended;
+
+-- abort all queries running in warehouse
+alter warehouse compute_wh abort all queries;
+
+-- rename warehouse name
+alter warehouse compute_wh rename to computer_wh;
+
+-------------------------------------------------------------------------------
+-----working with roles and users----------
+---for example there is a snowflake acoount in your organization. and there are multiple employees who want to use the snowflake account, so how snowflake works is if you want to create the different user accounts, you can create the user and just give them the url and their default password and username.
+--suppose we have creted 10 accounts for 10 different employees then we dont want to likegive them access each database, all the schemas , all the tables
+-----providing privileges to specific objects is possible for suppose employee x wants the data of table a and employee y wants data on table b. so these objects specific privileges can be granted to each user. its is not required to privde the access to complete data. so that you dont lose thedata and the data is not misused.just provide the access to specific users respective to the department and present they are working on.
+
+
+
+
+-- Create ROLE and USER. Then grant privileges.
+-- role are simply the collection of privileges that we can grant to a user.
+--- there is one more layer before assigning the privileges to user, suppose there are 5 users to which similar kind of privileges need to be assigned . we can create roles in that case. suppose role A has specific privileges to access the data from db database and role B has privileges to access data from company database and role C has privileges to access to some other database, similarly we can create different roles on different database and then assign this role to a user so that all the privileges that have been granted to this role will be automatically granted to that user.
+
+
+CREATE OR REPLACE ROLE TEST_ROLE;
+CREATE ROLE IF NOT EXISTS TEST_ROLE;
+
+GRANT ALL PRIVILEGES ON DATABASE DB TO ROLE TEST_ROLE;
+GRANT ALL PRIVILEGES ON SCHEMA EMPLOYEE TO ROLE TEST_ROLE;
+GRANT ALL PRIVILEGES ON TABLE A TO ROLE TEST_ROLE; -----need to specify the schema
+GRANT ALL PRIVILEGES ON TABLE EMPLOYEE.A TO ROLE TEST_ROLE;
+
+
+
+USE WAREHOUSE COMPUTE_WH;
+USE ROLE TEST_ROLE;
+
+GRANT ROLE TEST_ROLE TO USER Dinesh;
+
+
+CREATE OR REPLACE USER TEST_USER PASSWORD = 'ABC123' DEFAULT_ROLE = 'PUBLIC' MUST_CHANGE_PASSWORD = TRUE;
+
+// GRANT PRIVILEGES TO ROLE
+-- Grants one or more access privileges on a securable object to a role.
+-- The privileges that can be granted are object-specific and are grouped into the following categories:
+    -- Global privileges
+    -- Privileges for account objects (resource monitors, virtual warehouses, and databases)
+    -- Privileges for schemas
+    -- Privileges for schema objects (tables, views, stages, file formats, UDFs, and sequences)
+
+
+// GRANT ROLE
+    -- Assigns a role to a user or another role:
+    -- Granting a role to another role creates a “parent-child” relationship between the roles (also referred to as a role hierarchy).
+    -- Granting a role to a user enables the user to perform all operations allowed by the role
+        -- (through the access privileges granted to the role).
+       
+SHOW GRANTS;
+
+alter warehouse computer_wh rename to compute_wh;
