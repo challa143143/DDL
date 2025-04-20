@@ -165,3 +165,193 @@ CREATE OR REPLACE USER TEST_USER PASSWORD = 'ABC123' DEFAULT_ROLE = 'PUBLIC' MUS
 SHOW GRANTS;
 
 alter warehouse computer_wh rename to compute_wh;
+
+------ ALTER DATABASE
+
+-- Modifies the properties for an existing database, including the following:
+
+    -- Changing the name of the database or changing the Time Travel data retention period 
+
+                -- (only available in ENTERPRISE or BUSINESS CRITICAL snowflake editions)
+
+    -- Enabling and managing database replication and failover.
+
+
+
+ALTER DATABASE IF EXISTS COMPANY RENAME TO PRODUCTION;
+
+ALTER DATABASE IF EXISTS PRODUCTION RENAME TO COMPANY;
+
+
+
+------ ALTER SCHEMA
+
+-- Modifies the properties for an existing schema, including renaming the schema or swapping it with another schema, 
+
+    // and changing the Time Travel data retention period
+
+    
+
+ALTER SCHEMA IF EXISTS EMPLOYEE RENAME TO EMPL;
+
+
+
+create or replace schema employee;
+
+create schema if not exists department;
+
+create or replace table db.employee.empl_details(empl_id number);
+
+create or replace table db.department.dept_details(dept_id number);
+
+
+
+
+
+ALTER SCHEMA IF EXISTS DB.DEPARTMENT SWAP WITH DB.EMPLOYEE;
+
+
+
+ALTER SCHEMA IF EXISTS DB.DEPARTMENT SWAP WITH DB.EMPLOYEE; ----2 nd time to get the tables under respected schema
+
+
+
+ALTER SCHEMA IF EXISTS DB.DEPARTMENT
+
+SET DATA_RETENTION_TIME_IN_DAYS = 2,
+
+    COMMENT = 'DEPARTMENT DETAILS SCHEMA';
+
+    
+
+SELECT * FROM "DB"."INFORMATION_SCHEMA"."SCHEMATA"
+
+WHERE SCHEMA_NAME = 'DEPARTMENT';
+
+    
+
+show schemas;
+
+    
+
+------ ALTER TABLE
+
+-- Modifies the properties, columns, or constraints for an existing table.
+
+
+
+ALTER TABLE IF EXISTS DEPARTMENT.DEPT_DETAILS RENAME TO DEPARTMENT_DETAILS;
+
+
+
+ALTER TABLE IF EXISTS EMPLOYEE.DEPARTMENT_DETAILS RENAME TO DEPARTMENT.DEPARTMENT_DETAILS;
+
+---changing location of the table
+
+
+
+create or replace table db.department.department_employees(dept_id number,
+
+                                                               empl_name varchar(40));
+
+                                                               
+
+ALTER TABLE IF EXISTS DB.DEPARTMENT.DEPARTMENT_DETAILS SWAP WITH DB.DEPARTMENT.DEPARTMENT_EMPLOYEES;
+
+-----the columns have been swapped.
+
+
+
+----------------- DROP -----------------
+
+-- delete objects from the database permenently.
+
+
+
+drop table employee.empl_details; ----while we are doing with any to table we have to specify schema name.
+
+drop schema db.empl;
+
+drop database company;
+
+drop warehouse test;
+
+drop view db.public.myview;
+
+drop stage if exists mystage;
+
+drop file format if exists parquet_format;
+
+
+
+----------------- TRUNCATE -----------------
+
+-- remove all records from a table, including all memory spaces allocated for the records are removed
+
+---truncate can be applied to table not database or schema.
+
+---drop is completely deleting the object,it doesnot restorable once it dropped.
+
+---truncate deletes the data/records inside the table but it retains the structure of the table means all the columns that are there in the table will retained and all the metadata will be retained.
+
+
+
+TRUNCATE TABLE DB.PUBLIC.A;
+
+TRUNCATE TABLE IF EXISTS DB.DEPARTMENT.DEPARTMENT_DETAILS;
+
+
+
+----------------- COMMENT -----------------
+
+---comment is very useful because once your data is grown to good level lke multiple databases , schemas and hundreds of tables are there, at a certain point of level it becames very difficult for you to idetify like which table have which kind of data but while creating a table if you specifically mention that this kind of table contains this kind of data
+
+---for eg:suppose there is an order table, you can give a comments like this table contains orders from certain date to certain date or for an employees table this table contains the information of x organisation.
+
+
+
+
+
+
+
+
+
+-- add comments to the data dictionary
+
+-- overwrites an existing comment for an existing object.
+
+-- can be added to all objects (users, roles, warehouses, databases, tables, etc.). 
+
+-- can be added to individual table columns as well.
+
+
+
+COMMENT IF EXISTS ON SCHEMA DB.DEPARTMENT IS 'TEST Department Schema xyz';
+
+
+
+SHOW SCHEMAS LIKE 'DEPARTMENT';
+
+
+
+DESC SCHEMA DEPARTMENT;
+
+
+
+COMMENT IF EXISTS ON TABLE DB.DEPARTMENT.DEPARTMENT_EMPLOYEES IS 'ALL ABOUT DEPARTMENT DETAILS';
+
+
+
+SHOW TABLES LIKE 'DEPARTMENT_EMPLOYEES';----- change schema to department and execute
+
+
+
+DESC TABLE DB.DEPARTMENT.DEPARTMENT_EMPLOYEES;
+
+
+
+select * from "DB"."INFORMATION_SCHEMA"."TABLES" where table_Schema = 'DEPARTMENT';
+
+
+
+select count(distinct table_name) from "DB"."INFORMATION_SCHEMA"."TABLES" where table_Schema = 'DEPARTMENT';
